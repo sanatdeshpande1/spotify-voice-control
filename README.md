@@ -1,6 +1,6 @@
 # Spotify Voice Control
 
-Spotify voice control is a personal project aimed at combining Speech Recognition and Spotify Web API to control Spotify devices by voice commands. The project is at a very early stage and I am yet to implement most of the error handling and refactoring the code.
+Spotify voice control is a personal project aimed at combining Speech Recognition and Spotify Web API to control Spotify devices through voice commands. The project is at a very early stage and I am yet to implement most of the error handling and refactoring the code.
 
 Things in pipeline:
 
