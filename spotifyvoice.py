@@ -31,8 +31,8 @@ class SpotifyVoice:
 
     def play_song(self, song="bohemian rhapsody"):
         res = self.sp.search(song)
-        song = res['tracks']['items'][0]['uri']
-        self.sp.start_playback(self.device_id, uris=[song])
+        song = [item['uri'] for item in res['tracks']['items']]
+        self.sp.start_playback(self.device_id, uris=[song[0]])
 
     def stop(self):
         self.sp.pause_playback(self.device_id)
