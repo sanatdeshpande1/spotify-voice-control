@@ -1,0 +1,12 @@
+{
+    "play": ["play", "start", "begin", "play song"],
+    "pause": ["pause", "stop", "pause song", "stop song", "shut up"],
+    "volume_up": ["increase volume", "volume high", "volume up", "high volume", "volume max"],
+    "volume_down": ["decrease volume", "volume low", "volume down", "volume minimum", "low volume", "reduce volume"],
+    "volume_mid": ["volume medium", "volume mid"],
+    "previous_track": ["previous_track", "previous song", "back", "previous"],
+    "next_track": ["next_track", "next song", "next"],
+    "queue": ["my list", "my queue", "queue", "q", "list", "next songs", "next 5 songs", "songs in my list"],
+    "exit": ["quit", "exit", "close"],
+    "close_spotify": ["close spotify", "exit spotify", "stop spotify"]
+}
