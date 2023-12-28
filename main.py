@@ -43,6 +43,9 @@ def record():
 				recorded_text = recorded_text.lower()
 				print(recorded_text)
 
+				if recorded_text == "exit":
+					break
+
 				url = "https://api.wit.ai/message"
 				date = datetime.today().strftime('%Y%m%d')
 				headers = {"Authorization": f"Bearer {WIT_AI_TOKEN}"}
@@ -56,22 +59,28 @@ def record():
 				intent = max(data['intents'], key=lambda x : x['confidence'])
 				intent_name = intent['name']
 
-				if intent_name == 'wit$play':
+				if intent_name == 'wit$play_music' or intent_name == 'wit$resume_music':
 					SpeakText("Playing current song.")
 					sp.play_pause()
 				
 				if intent_name == 'playSong':
-					search_queries = data['entities']['wit$search_query:search_query']
+					search_queries = data['entities']['requestedSong:requestedSong']
 					requested_song = ' '.join(query['value'] for query in search_queries)
 					print(requested_song)
 					sp.play_song(requested_song)
 				
-				if intent_name == 'wit$pause':
+				if intent_name == 'wit$pause_music' or intent_name == 'wit$stop_music':
 					sp.play_pause(pause=True)
 					SpeakText("Song paused.")
 
+				if intent_name == 'wit$skip_track':
+					sp.next_track()
+				
+				if intent_name == 'wit$previous_track':
+					sp.previous_track()
+				
 		except:
-			return
+			pass
 
 # while(1):
 # 	try:	
