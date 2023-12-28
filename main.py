@@ -3,10 +3,13 @@ import pyttsx3
 from dotenv import load_dotenv
 import os
 import json
+import requests
+from datetime import datetime
 
 from spotifyvoice import SpotifyVoice
 
 load_dotenv()
+WIT_AI_TOKEN = os.getenv("WIT_AI_TOKEN")
 VOICE_ASSISTANT_NAME = os.getenv("VOICE_ASSISTANT_NAME")
 va_wake_words = [VOICE_ASSISTANT_NAME, 'hi ' + VOICE_ASSISTANT_NAME, 'hello']
 
@@ -38,59 +41,54 @@ def record():
 				
 				recorded_text = speech_recognizer.recognize_google(audio2)
 				recorded_text = recorded_text.lower()
+				print(recorded_text)
 
-				if recorded_text in commands['close_spotify'] or recorded_text in commands['exit']:
-					SpeakText("Closing Spotify.")
-					sp.play_pause(pause=True)
-					return
+				url = "https://api.wit.ai/message"
+				date = datetime.today().strftime('%Y%m%d')
+				headers = {"Authorization": f"Bearer {WIT_AI_TOKEN}"}
+				params = {"v": date, "q": recorded_text}
+				resp = requests.get(url, headers=headers, params=params)
+				print(resp)
+				if resp.status_code == 200:
+					data = resp.json()
+					print(data)
+				
+				intent = max(data['intents'], key=lambda x : x['confidence'])
+				intent_name = intent['name']
 
-				tokens = recorded_text.split()
-				if(len(tokens) > 1 and tokens[0] == "play"):
-					requested_song = " ".join(tokens[1:])
-					print(requested_song)
-					sp.play_song(requested_song)
-				if recorded_text in commands['play']:
+				if intent_name == 'wit$play':
 					SpeakText("Playing current song.")
 					sp.play_pause()
-				if recorded_text in commands['pause']:
+				
+				if intent_name == 'playSong':
+					search_queries = data['entities']['wit$search_query:search_query']
+					requested_song = ' '.join(query['value'] for query in search_queries)
+					print(requested_song)
+					sp.play_song(requested_song)
+				
+				if intent_name == 'wit$pause':
 					sp.play_pause(pause=True)
 					SpeakText("Song paused.")
-				if recorded_text in commands['volume_up']:
-					sp.change_volume(1)
-				if recorded_text in commands['volume_down']:
-					sp.change_volume(-1)
-				if recorded_text in commands['volume_mid']:
-					sp.change_volume(0)
-				if recorded_text in commands['next_track']:
-					sp.next_track()
-				if recorded_text in commands['previous_track']:
-					sp.previous_track()
-				if recorded_text in commands['queue']:
-					user_queue = sp.get_queue()
-					SpeakText("Next 5 songs in your list are: ")
-					for i in range (5):
-						SpeakText(user_queue[i])
-							
-				print(recorded_text)
 
 		except:
 			return
 
-while(1):
-	try:	
-		with sr.Microphone() as src:
-			speech_recognizer.adjust_for_ambient_noise(src, duration=0.2)
-			audio = speech_recognizer.listen(src)
-			recorded_text = speech_recognizer.recognize_google(audio)
-			recorded_text = recorded_text.lower()
-			print(recorded_text)
+# while(1):
+# 	try:	
+# 		with sr.Microphone() as src:
+# 			speech_recognizer.adjust_for_ambient_noise(src, duration=0.2)
+# 			audio = speech_recognizer.listen(src)
+# 			recorded_text = speech_recognizer.recognize_google(audio)
+# 			recorded_text = recorded_text.lower()
+# 			print(recorded_text)
 			
-			if recorded_text in va_wake_words:
-				SpeakText("Listening.")
-				record()
-			if recorded_text == 'quit' or recorded_text == 'exit' or recorded_text == 'close':
-				exit()
+# 			if recorded_text in va_wake_words:
+# 				SpeakText("Listening.")
+# 				record()
+# 			if recorded_text == 'quit' or recorded_text == 'exit' or recorded_text == 'close':
+# 				exit()
 
-	except:
-		SpeakText("I did not understand that.")
+# 	except:
+		# SpeakText("I did not understand that.")
 
+record()
