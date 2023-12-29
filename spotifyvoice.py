@@ -38,12 +38,7 @@ class SpotifyVoice:
         self.sp.pause_playback(self.device_id)
 
     def change_volume(self, change):
-        if change == 1:
-            self.sp.volume(95)  # high volume
-        if change == -1:
-            self.sp.volume(20)  # medium volume
-        if change == 0:
-            self.sp.volume(50)  # low volume
+        self.sp.volume(change)
     
     def next_track(self):
         self.sp.next_track(self.device_id)

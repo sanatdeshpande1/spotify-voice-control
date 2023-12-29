@@ -35,39 +35,47 @@ def record():
 		try:	
 			with sr.Microphone() as source2:
 				
-				speech_recognizer.adjust_for_ambient_noise(source2, duration=0.2)
+				speech_recognizer.adjust_for_ambient_noise(source2, duration=1)
 				
-				audio2 = speech_recognizer.listen(source2, timeout=10)
+				audio2 = speech_recognizer.listen(source2, timeout=5)
 				
 				recorded_text = speech_recognizer.recognize_google(audio2)
 				recorded_text = recorded_text.lower()
 				print(recorded_text)
 
-				if recorded_text == "exit":
-					break
+				# if recorded_text == "exit":
+				# 	break
 
 				url = "https://api.wit.ai/message"
 				date = datetime.today().strftime('%Y%m%d')
 				headers = {"Authorization": f"Bearer {WIT_AI_TOKEN}"}
 				params = {"v": date, "q": recorded_text}
 				resp = requests.get(url, headers=headers, params=params)
-				print(resp)
 				if resp.status_code == 200:
 					data = resp.json()
-					print(data)
 				
 				intent = max(data['intents'], key=lambda x : x['confidence'])
 				intent_name = intent['name']
+				if 'action:action' in data['entities']:
+					action = max(data['entities']['action:action'], key=lambda x : x['confidence'])
+
+				print(intent_name)
+
+				if action['value'] == 'exit':
+					break
 
 				if intent_name == 'wit$play_music' or intent_name == 'wit$resume_music':
 					SpeakText("Playing current song.")
 					sp.play_pause()
 				
 				if intent_name == 'playSong':
-					search_queries = data['entities']['requestedSong:requestedSong']
-					requested_song = ' '.join(query['value'] for query in search_queries)
-					print(requested_song)
-					sp.play_song(requested_song)
+					if 'requestedSong:requestedSong' in data['entities']:
+						search_queries = data['entities']['requestedSong:requestedSong']
+						requested_song = ' '.join(query['value'] for query in search_queries)
+						sp.play_song(requested_song)
+					else:
+						if action['value'] == 'play':
+							sp.play_pause()
 				
 				if intent_name == 'wit$pause_music' or intent_name == 'wit$stop_music':
 					sp.play_pause(pause=True)
@@ -78,6 +86,18 @@ def record():
 				
 				if intent_name == 'wit$previous_track':
 					sp.previous_track()
+				
+				if intent_name == 'changeVolume':
+					new_volume = 50
+					if action['value'] == 'high':
+						new_volume = 80
+					elif action['value'] == 'low':
+						new_volume = 20
+
+					if 'volumeLevel:volumeLevel' in data['entities']:
+						requestedVolume = max(data['entities']['volumeLevel:volumeLevel'], key=lambda x : x['confidence'])
+						new_volume = int(requestedVolume['value'])
+					sp.change_volume(new_volume)
 				
 		except:
 			pass
