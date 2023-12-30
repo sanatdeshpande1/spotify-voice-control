@@ -20,7 +20,6 @@ speech_recognizer = sr.Recognizer()
 engine = None
 def SpeakText(command):
 	engine = pyttsx3.init()
-	engine.setProperty('voice', 0)
 	engine.setProperty('volume', 100)
 	engine.setProperty('rate', 200)
 	engine.say(command)
@@ -42,9 +41,6 @@ def record():
 				recorded_text = speech_recognizer.recognize_google(audio2)
 				recorded_text = recorded_text.lower()
 				print(recorded_text)
-
-				# if recorded_text == "exit":
-				# 	break
 
 				url = "https://api.wit.ai/message"
 				date = datetime.today().strftime('%Y%m%d')
@@ -97,6 +93,8 @@ def record():
 					if 'volumeLevel:volumeLevel' in data['entities']:
 						requestedVolume = max(data['entities']['volumeLevel:volumeLevel'], key=lambda x : x['confidence'])
 						new_volume = int(requestedVolume['value'])
+						if new_volume > 100 or requestedVolume['value'] == 'max':
+							new_volume = 100
 					sp.change_volume(new_volume)
 				
 		except:
