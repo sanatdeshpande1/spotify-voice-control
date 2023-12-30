@@ -3,10 +3,13 @@ import pyttsx3
 from dotenv import load_dotenv
 import os
 import json
+import requests
+from datetime import datetime
 
 from spotifyvoice import SpotifyVoice
 
 load_dotenv()
+WIT_AI_TOKEN = os.getenv("WIT_AI_TOKEN")
 VOICE_ASSISTANT_NAME = os.getenv("VOICE_ASSISTANT_NAME")
 va_wake_words = [VOICE_ASSISTANT_NAME, 'hi ' + VOICE_ASSISTANT_NAME, 'hello']
 
@@ -17,7 +20,6 @@ speech_recognizer = sr.Recognizer()
 engine = None
 def SpeakText(command):
 	engine = pyttsx3.init()
-	engine.setProperty('voice', 0)
 	engine.setProperty('volume', 100)
 	engine.setProperty('rate', 200)
 	engine.say(command)
@@ -32,65 +34,88 @@ def record():
 		try:	
 			with sr.Microphone() as source2:
 				
-				speech_recognizer.adjust_for_ambient_noise(source2, duration=0.2)
+				speech_recognizer.adjust_for_ambient_noise(source2, duration=1)
 				
-				audio2 = speech_recognizer.listen(source2, timeout=10)
+				audio2 = speech_recognizer.listen(source2, timeout=5)
 				
 				recorded_text = speech_recognizer.recognize_google(audio2)
 				recorded_text = recorded_text.lower()
-
-				if recorded_text in commands['close_spotify'] or recorded_text in commands['exit']:
-					SpeakText("Closing Spotify.")
-					sp.play_pause(pause=True)
-					return
-
-				tokens = recorded_text.split()
-				if(len(tokens) > 1 and tokens[0] == "play"):
-					requested_song = " ".join(tokens[1:])
-					print(requested_song)
-					sp.play_song(requested_song)
-				if recorded_text in commands['play']:
-					SpeakText("Playing current song.")
-					sp.play_pause()
-				if recorded_text in commands['pause']:
-					sp.play_pause(pause=True)
-					SpeakText("Song paused.")
-				if recorded_text in commands['volume_up']:
-					sp.change_volume(1)
-				if recorded_text in commands['volume_down']:
-					sp.change_volume(-1)
-				if recorded_text in commands['volume_mid']:
-					sp.change_volume(0)
-				if recorded_text in commands['next_track']:
-					sp.next_track()
-				if recorded_text in commands['previous_track']:
-					sp.previous_track()
-				if recorded_text in commands['queue']:
-					user_queue = sp.get_queue()
-					SpeakText("Next 5 songs in your list are: ")
-					for i in range (5):
-						SpeakText(user_queue[i])
-							
 				print(recorded_text)
 
+				url = "https://api.wit.ai/message"
+				date = datetime.today().strftime('%Y%m%d')
+				headers = {"Authorization": f"Bearer {WIT_AI_TOKEN}"}
+				params = {"v": date, "q": recorded_text}
+				resp = requests.get(url, headers=headers, params=params)
+				if resp.status_code == 200:
+					data = resp.json()
+				
+				intent = max(data['intents'], key=lambda x : x['confidence'])
+				intent_name = intent['name']
+				if 'action:action' in data['entities']:
+					action = max(data['entities']['action:action'], key=lambda x : x['confidence'])
+
+				print(intent_name)
+
+				if action['value'] == 'exit':
+					break
+
+				if intent_name == 'wit$play_music' or intent_name == 'wit$resume_music':
+					SpeakText("Playing current song.")
+					sp.play_pause()
+				
+				if intent_name == 'playSong':
+					if 'requestedSong:requestedSong' in data['entities']:
+						search_queries = data['entities']['requestedSong:requestedSong']
+						requested_song = ' '.join(query['value'] for query in search_queries)
+						sp.play_song(requested_song)
+					else:
+						if action['value'] == 'play':
+							sp.play_pause()
+				
+				if intent_name == 'wit$pause_music' or intent_name == 'wit$stop_music':
+					sp.play_pause(pause=True)
+					SpeakText("Song paused.")
+
+				if intent_name == 'wit$skip_track':
+					sp.next_track()
+				
+				if intent_name == 'wit$previous_track':
+					sp.previous_track()
+				
+				if intent_name == 'changeVolume':
+					new_volume = 50
+					if action['value'] == 'high':
+						new_volume = 80
+					elif action['value'] == 'low':
+						new_volume = 20
+
+					if 'volumeLevel:volumeLevel' in data['entities']:
+						requestedVolume = max(data['entities']['volumeLevel:volumeLevel'], key=lambda x : x['confidence'])
+						new_volume = int(requestedVolume['value'])
+						if new_volume > 100 or requestedVolume['value'] == 'max':
+							new_volume = 100
+					sp.change_volume(new_volume)
+				
 		except:
-			return
+			pass
 
-while(1):
-	try:	
-		with sr.Microphone() as src:
-			speech_recognizer.adjust_for_ambient_noise(src, duration=0.2)
-			audio = speech_recognizer.listen(src)
-			recorded_text = speech_recognizer.recognize_google(audio)
-			recorded_text = recorded_text.lower()
-			print(recorded_text)
+# while(1):
+# 	try:	
+# 		with sr.Microphone() as src:
+# 			speech_recognizer.adjust_for_ambient_noise(src, duration=0.2)
+# 			audio = speech_recognizer.listen(src)
+# 			recorded_text = speech_recognizer.recognize_google(audio)
+# 			recorded_text = recorded_text.lower()
+# 			print(recorded_text)
 			
-			if recorded_text in va_wake_words:
-				SpeakText("Listening.")
-				record()
-			if recorded_text == 'quit' or recorded_text == 'exit' or recorded_text == 'close':
-				exit()
+# 			if recorded_text in va_wake_words:
+# 				SpeakText("Listening.")
+# 				record()
+# 			if recorded_text == 'quit' or recorded_text == 'exit' or recorded_text == 'close':
+# 				exit()
 
-	except:
-		SpeakText("I did not understand that.")
+# 	except:
+		# SpeakText("I did not understand that.")
 
+record()
